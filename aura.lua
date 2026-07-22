@@ -1,5 +1,5 @@
 -- ==============================================================================
--- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (PURE SOLID & TRANSPARENT TOGGLE)
+-- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (OFFICIAL INS-UI ICONS ENABLED)
 -- Repository: https://github.com/huoadf/matcha-aura
 -- Docs: https://huoadf.github.io/matcha-docs/
 -- ==============================================================================
@@ -16,7 +16,7 @@ local aura_config = {
     sparks_enabled     = true,
     glow_enabled       = true,
     filled_particles   = false,
-    pure_solid         = false, -- Toggle between 100% Solid Opaque vs Fading Transparent
+    pure_solid         = false,
     rainbow_main       = false,
     rainbow_sparks     = false,
     rainbow_speed      = 1.0,
@@ -172,7 +172,7 @@ local function getTargetHRP()
     return myHRP
 end
 
--- Keybind Listener (Safe Enum & Keycode handling)
+-- Keybind Listener
 if UserInputService and UserInputService.InputBegan then
     pcall(function()
         UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -441,8 +441,8 @@ if Lib and Lib.CreateWindow then
     win:AddSettingsTab("cog")
     Lib:Notify("Matcha Aura Studio", "Loaded! Press P to toggle menu.", 4, "info")
 
-    -- Tab 1: Aura Config
-    local mainTab = win:Tab("Aura Config")
+    -- Tab 1: Aura Config (Official INS-ui Icon: "sparkles")
+    local mainTab = win:Tab("Aura Config", "sparkles")
     local secControls = mainTab:Section("Master Controls", "Left")
     secControls:Toggle("Enable Main Aura", aura_config.enabled, function(on)
         aura_config.enabled = on
@@ -479,8 +479,8 @@ if Lib and Lib.CreateWindow then
         if val then aura_config.pattern_mode = val end
     end)
 
-    -- Tab 2: Dynamics & Motion
-    local dynTab = win:Tab("Dynamics")
+    -- Tab 2: Dynamics & Motion (Official INS-ui Icon: "activity")
+    local dynTab = win:Tab("Dynamics", "activity")
     local secCounts = dynTab:Section("Particle Counts", "Left")
     secCounts:Slider("Outer Particle Count", 35, 1, 5, 80, "", function(v) aura_config.particle_count = v end)
     secCounts:Slider("Inner Spark Count", 20, 1, 2, 40, "", function(v) aura_config.spark_count = v end)
@@ -499,8 +499,8 @@ if Lib and Lib.CreateWindow then
         aura_config.velocity_heatmap = on
     end)
 
-    -- Tab 3: Dimensions & Radius
-    local dimTab = win:Tab("Dimensions")
+    -- Tab 3: Dimensions & Radius (Official INS-ui Icon: "box")
+    local dimTab = win:Tab("Dimensions", "box")
     local secRad = dimTab:Section("Radius & Offsets", "Left")
     secRad:Slider("Outer Radius", 4.0, 0.1, 1, 12, "m", function(v) aura_config.outer_radius = v end)
     secRad:Slider("Inner Radius", 1.5, 0.1, 0.5, 8, "m", function(v) aura_config.inner_radius = v end)
@@ -513,8 +513,8 @@ if Lib and Lib.CreateWindow then
     secSize:Slider("Glow Scale", 2.5, 0.1, 1, 6, "x", function(v) aura_config.glow_scale = v end)
     secSize:Slider("Edge Thickness", 1.5, 0.1, 1, 5, "px", function(v) aura_config.thickness = v end)
 
-    -- Tab 4: Colors & FX
-    local colTab = win:Tab("Colors & FX")
+    -- Tab 4: Colors & FX (Official INS-ui Icon: "palette")
+    local colTab = win:Tab("Colors & FX", "palette")
     local secColors = colTab:Section("Color Customization", "Left")
 
     local colMainToggle = secColors:Toggle("Outer Particle Color", true)
@@ -558,4 +558,4 @@ _G.get_aura_config = function()
     return aura_config
 end
 
-print("[Matcha 3D Aura Studio]: Pure Solid / Transparent toggle active!")
+print("[Matcha 3D Aura Studio]: Official INS-ui icon set enabled!")
