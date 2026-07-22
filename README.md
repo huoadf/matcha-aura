@@ -1,6 +1,6 @@
 # Matcha Particle & Spark Aura Studio
 
-A high-performance, fully customizable Particle & Spark 3D Aura system for **Matcha LuaVM** (Roblox external script), powered by the official **[INS ui](https://github.com/neaxusxgod-png/INS-ui)** menu library.
+A high-performance, frame-perfect 3D Particle & Spark Aura system for **Matcha LuaVM** (Roblox external script), powered by the official **[INS ui](https://github.com/neaxusxgod-png/INS-ui)** menu library.
 
 ## 🚀 Execution Loadstring
 
@@ -8,13 +8,20 @@ A high-performance, fully customizable Particle & Spark 3D Aura system for **Mat
 loadstring(game:HttpGet("https://raw.githubusercontent.com/huoadf/matcha-aura/main/aura.lua"))()
 ```
 
-## ✨ What's New & Included
-- **Official INS-UI Integration**: Sleek modern tabbed UI with setting icons, settings tab (`Press P to toggle`), and interactive widgets.
-- **4 Aura Pattern Modes**:
-  - `Dual Ring`: Rotating inner & outer rings with wave bobbing.
-  - `Vortex Helix`: Particle energy tornado spiraling vertically around your avatar.
-  - `Expanding Shockwave`: Rhythmic pulse waves expanding outwards.
-  - `Halo & Floor Ring`: Dual rings with a floating halo above the head and a floor ring at the feet.
-- **Target-Lock & ESP**: Lock your aura onto yourself (`LocalPlayer`), the `Closest Player`, or `Random Player`.
-- **Full Customization**: Particle counts ($1 \to 80$), spark counts ($1 \to 40$), inner/outer radius, particle sizes, glow intensity, master opacity, and color pickers + rainbow HSV modes.
-- **120 FPS Optimization**: Pre-allocated `Drawing.new("Circle")` memory pools to ensure zero memory leaks.
+## ✨ New Features & Fixes
+- **Frame-Perfect Smooth Sync (`RenderStepped`)**: Eliminates character jitter and movement lag when walking or running.
+- **8 Exotic 3D Pattern Modes**:
+  1. `Dual Ring`
+  2. `Vortex Helix`
+  3. `Expanding Shockwave`
+  4. `Halo & Floor Ring`
+  5. `Saturn Rings` (Tilted planetary disc with counter-rotating particles)
+  6. `DNA Double Helix` (Intertwining energy strands)
+  7. `Crown & Ground Ring` (Floating gem crown + ground ring)
+  8. `Chaos Lightning` (Electric high-frequency jittering energy sparks)
+- **Velocity Reactive Engine**:
+  - `Velocity Speed Expansion`: Aura expands when walking/sprinting fast.
+  - `Velocity Heatmap Color`: Dynamic color shifting based on player velocity.
+- **RGB Chroma Split**: Cyberpunk holographic chromatic aberration effect.
+- **Quick Keybind**: Press **`X`** to toggle aura on/off instantly.
+- **Official INS-UI Menu**: Full controls, smooth sliders, and setting menu (`Press P to toggle`).

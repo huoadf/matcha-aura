@@ -1,16 +1,17 @@
 -- ==============================================================================
--- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (FIXED & FULLY FUNCTIONAL)
+-- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (SMOOTH RENDER & EXOTIC FX)
 -- Repository: https://github.com/huoadf/matcha-aura
 -- Docs: https://huoadf.github.io/matcha-docs/
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Master Config Table
 local aura_config = {
-    -- Toggles & Modes
+    -- Master Toggles & Modes
     enabled            = true,
     sparks_enabled     = true,
     glow_enabled       = true,
@@ -19,9 +20,16 @@ local aura_config = {
     rainbow_sparks     = false,
     rainbow_speed      = 1.0,
 
+    -- Velocity & Reactive FX
+    velocity_reactive  = true,
+    velocity_heatmap   = false,
+    chroma_split       = false,
+    chroma_offset      = 3.0,
+
+    -- Target & Pattern Modes
     target_lock_on     = false,
     target_mode        = "LocalPlayer", -- "LocalPlayer", "Closest", "Random"
-    pattern_mode       = "Dual Ring",    -- "Dual Ring", "Vortex Helix", "Expanding Shockwave", "Halo & Floor Ring"
+    pattern_mode       = "Dual Ring",    -- "Dual Ring", "Vortex Helix", "Expanding Shockwave", "Halo & Floor Ring", "Saturn Rings", "DNA Double Helix", "Crown & Ground Ring", "Chaos Lightning"
 
     -- Particle Counts
     particle_count     = 35,
@@ -50,55 +58,63 @@ local aura_config = {
     bobbing_amplitude  = 0.5,
     vortex_height      = 2.5,
 
+    -- Keybind Toggle
+    toggle_key         = "X",
+
     -- Opacity & Intensity
     glow_intensity     = 0.35,
     opacity            = 0.85
 }
 
--- Drawing Pools (Pre-allocated for maximum 120 FPS performance)
+-- Pre-allocated Drawing Pools (120 FPS Memory Management)
 local MAX_PARTICLES = 80
 local MAX_SPARKS    = 40
 
-local particle_pool = {}
-local spark_pool    = {}
-local glow_pool     = {}
+local particle_pool   = {}
+local particle_pool_r = {}
+local particle_pool_b = {}
+local spark_pool      = {}
+local glow_pool       = {}
 
 for i = 1, MAX_PARTICLES do
     local c = Drawing.new("Circle")
-    c.Visible = false
-    c.Thickness = aura_config.thickness
-    c.NumSides = 16
-    c.ZIndex = 6
+    c.Visible = false; c.Thickness = aura_config.thickness; c.NumSides = 16; c.ZIndex = 6
     particle_pool[i] = c
+
+    local cr = Drawing.new("Circle")
+    cr.Visible = false; cr.Thickness = 1.0; cr.NumSides = 12; cr.ZIndex = 4
+    cr.Color = Color3.fromRGB(255, 50, 50)
+    particle_pool_r[i] = cr
+
+    local cb = Drawing.new("Circle")
+    cb.Visible = false; cb.Thickness = 1.0; cb.NumSides = 12; cb.ZIndex = 4
+    cb.Color = Color3.fromRGB(50, 100, 255)
+    particle_pool_b[i] = cb
 end
 
 for i = 1, MAX_SPARKS do
     local s = Drawing.new("Circle")
-    s.Visible = false
-    s.Thickness = 1.0
-    s.NumSides = 12
-    s.ZIndex = 7
-    s.Filled = true
+    s.Visible = false; s.Thickness = 1.0; s.NumSides = 12; s.ZIndex = 7; s.Filled = true
     spark_pool[i] = s
 
     local g = Drawing.new("Circle")
-    g.Visible = false
-    g.Thickness = 1.0
-    g.NumSides = 12
-    g.ZIndex = 5
-    g.Filled = true
+    g.Visible = false; g.Thickness = 1.0; g.NumSides = 12; g.ZIndex = 5; g.Filled = true
     glow_pool[i] = g
 end
 
 local function hideAll()
-    for i = 1, MAX_PARTICLES do particle_pool[i].Visible = false end
+    for i = 1, MAX_PARTICLES do
+        particle_pool[i].Visible = false
+        particle_pool_r[i].Visible = false
+        particle_pool_b[i].Visible = false
+    end
     for i = 1, MAX_SPARKS do
         spark_pool[i].Visible = false
         glow_pool[i].Visible = false
     end
 end
 
--- Rainbow Color Helper
+-- Rainbow & Color Helpers
 local COLOR_NOW = 0
 local function rainbowColor(offset)
     local h = ((COLOR_NOW * aura_config.rainbow_speed) + (offset or 0)) % 1
@@ -115,6 +131,15 @@ local function rainbowColor(offset)
     else               r,g,b = 1,0,q
     end
     return Color3.new(r, g, b)
+end
+
+local function lerpColor(c1, c2, t)
+    t = math.clamp(t, 0, 1)
+    return Color3.new(
+        c1.R + (c2.R - c1.R) * t,
+        c1.G + (c2.G - c1.G) * t,
+        c1.B + (c2.B - c1.B) * t
+    )
 end
 
 -- Target Lock HRP Resolver
@@ -148,9 +173,22 @@ local function getTargetHRP()
     return myHRP
 end
 
--- Main Render Loop Hook
+-- Keybind Toggle Listener
+if UserInputService and UserInputService.InputBegan then
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode and input.KeyCode.Name == aura_config.toggle_key then
+            aura_config.enabled = not aura_config.enabled
+        end
+    end)
+end
+
+-- Frame-Perfect Smooth Render Update Routine
 local time = 0
-RunService.Heartbeat:Connect(function(dt)
+local lastPos = nil
+local currentVelMag = 0
+
+local function updateAura(dt)
     if not aura_config.enabled then
         hideAll()
         return
@@ -162,22 +200,43 @@ RunService.Heartbeat:Connect(function(dt)
         return
     end
 
+    -- Frame-Perfect Position & Velocity Calculation
     local root_pos = targetHRP.Position
+    if lastPos then
+        local instVel = (root_pos - lastPos).Magnitude / math.max(dt, 0.001)
+        currentVelMag = currentVelMag + (instVel - currentVelMag) * math.min(1, dt * 10)
+    end
+    lastPos = root_pos
+
     time = time + dt
     COLOR_NOW = (COLOR_NOW + dt * 0.25) % 1.0
 
-    local main_color  = aura_config.rainbow_main and rainbowColor() or aura_config.main_color
+    -- Velocity Speed Expansion
+    local speedBoost = aura_config.velocity_reactive and math.min(1.5, currentVelMag / 16) or 0
+    local outer_r    = aura_config.outer_radius * (1 + speedBoost * 0.35)
+    local inner_r    = aura_config.inner_radius * (1 + speedBoost * 0.2)
+
+    -- Dynamic Color Heatmap
+    local main_color = aura_config.main_color
+    if aura_config.velocity_heatmap then
+        local t = math.clamp(currentVelMag / 24, 0, 1)
+        main_color = lerpColor(Color3.fromRGB(60, 140, 255), Color3.fromRGB(255, 40, 60), t)
+    elseif aura_config.rainbow_main then
+        main_color = rainbowColor()
+    end
+
     local spark_color = aura_config.rainbow_sparks and rainbowColor(0.5) or aura_config.spark_color
     local glow_color  = aura_config.glow_color
     local opacity     = aura_config.opacity
     local filled      = aura_config.filled_particles
-    local inner_r     = aura_config.inner_radius
-    local outer_r     = aura_config.outer_radius
 
     -- 1. Main Outer Particles Loop
     local pCount = math.min(math.floor(aura_config.particle_count), MAX_PARTICLES)
     for i = 1, pCount do
         local c = particle_pool[i]
+        local cr = particle_pool_r[i]
+        local cb = particle_pool_b[i]
+
         local angle = (i / pCount) * math.pi * 2 + time * aura_config.rotation_speed
         local x, y, z
 
@@ -198,6 +257,32 @@ RunService.Heartbeat:Connect(function(dt)
             x = root_pos.X + math.cos(angle) * r
             z = root_pos.Z + math.sin(angle) * r
             y = root_pos.Y + (isHalo and 2.2 or -2.2) + math.sin(time * aura_config.bobbing_speed + i) * 0.2
+        elseif aura_config.pattern_mode == "Saturn Rings" then
+            local tiltA = math.rad(25)
+            local r = outer_r + math.sin(time * 2 + i) * 0.3
+            local rx = math.cos(angle) * r
+            local rz = math.sin(angle) * r
+            x = root_pos.X + rx
+            y = root_pos.Y + aura_config.height_offset + rz * math.sin(tiltA)
+            z = root_pos.Z + rz * math.cos(tiltA)
+        elseif aura_config.pattern_mode == "DNA Double Helix" then
+            local strand = (i % 2 == 0) and 1 or -1
+            local prog = (i / pCount)
+            local r = outer_r * 0.7
+            x = root_pos.X + math.cos(prog * math.pi * 4 + time * 3 + strand * math.pi) * r
+            z = root_pos.Z + math.sin(prog * math.pi * 4 + time * 3 + strand * math.pi) * r
+            y = root_pos.Y + (prog * 3.5 - 1.75)
+        elseif aura_config.pattern_mode == "Crown & Ground Ring" then
+            local isCrown = (i % 3 == 0)
+            local r = isCrown and (outer_r * 0.4) or outer_r
+            x = root_pos.X + math.cos(angle) * r
+            z = root_pos.Z + math.sin(angle) * r
+            y = root_pos.Y + (isCrown and 2.5 or -2.2)
+        elseif aura_config.pattern_mode == "Chaos Lightning" then
+            local r = outer_r + (math.random() * 2 - 1) * 0.6
+            x = root_pos.X + math.cos(angle) * r
+            z = root_pos.Z + math.sin(angle) * r
+            y = root_pos.Y + aura_config.height_offset + (math.random() * 2 - 1) * 0.4
         else -- Dual Ring Default (Outer Ring)
             local waveOffset = math.sin(time * aura_config.wave_speed + i * 0.5) * aura_config.wave_amplitude
             local r = math.max(0.5, outer_r + waveOffset)
@@ -219,11 +304,34 @@ RunService.Heartbeat:Connect(function(dt)
             c.Transparency = math.clamp(alpha * opacity, 0, 1)
             c.Filled = filled
             c.Visible = true
+
+            -- Chroma Split Offsets
+            if aura_config.chroma_split then
+                local co = aura_config.chroma_offset
+                cr.Position = Vector2.new(screen_pos.X - co, screen_pos.Y)
+                cr.Radius = size
+                cr.Transparency = alpha * opacity * 0.6
+                cr.Visible = true
+
+                cb.Position = Vector2.new(screen_pos.X + co, screen_pos.Y)
+                cb.Radius = size
+                cb.Transparency = alpha * opacity * 0.6
+                cb.Visible = true
+            else
+                cr.Visible = false
+                cb.Visible = false
+            end
         else
             c.Visible = false
+            cr.Visible = false
+            cb.Visible = false
         end
     end
-    for i = pCount + 1, MAX_PARTICLES do particle_pool[i].Visible = false end
+    for i = pCount + 1, MAX_PARTICLES do
+        particle_pool[i].Visible = false
+        particle_pool_r[i].Visible = false
+        particle_pool_b[i].Visible = false
+    end
 
     -- 2. Inner Sparks & Glow Orbs Loop
     if aura_config.sparks_enabled then
@@ -274,7 +382,16 @@ RunService.Heartbeat:Connect(function(dt)
             spark_pool[i].Visible = false; glow_pool[i].Visible = false
         end
     end
-end)
+end
+
+-- Connect to RenderStepped / Stepped for 100% Frame-Perfect Smoothness
+if RunService.RenderStepped then
+    RunService.RenderStepped:Connect(updateAura)
+elseif RunService.Stepped then
+    RunService.Stepped:Connect(function(_, dt) updateAura(dt) end)
+else
+    RunService.Heartbeat:Connect(updateAura)
+end
 
 -- Official INS-ui Integration
 local Lib = nil
@@ -299,7 +416,7 @@ if Lib and Lib.CreateWindow then
     })
 
     win:AddSettingsTab("cog")
-    Lib:Notify("Matcha Aura Studio", "Loaded! Press P to toggle menu.", 4, "info")
+    Lib:Notify("Matcha Aura Studio", "Loaded! Smooth 120 FPS active.", 4, "info")
 
     -- Tab 1: Aura Config
     local mainTab = win:Tab("Aura Config", "sparkles")
@@ -310,7 +427,6 @@ if Lib and Lib.CreateWindow then
     end)
     secControls:Toggle("Enable Inner Sparks", aura_config.sparks_enabled, function(on)
         aura_config.sparks_enabled = on
-        Lib:Notify("Sparks", on and "enabled" or "disabled", 2, on and "success" or "warning")
     end)
     secControls:Toggle("Enable Spark Glow", aura_config.glow_enabled, function(on)
         aura_config.glow_enabled = on
@@ -328,7 +444,10 @@ if Lib and Lib.CreateWindow then
     end)
 
     local secStyle = mainTab:Section("Pattern Styles", "Right")
-    secStyle:Dropdown("Aura Pattern Mode", {"Dual Ring"}, {"Dual Ring", "Vortex Helix", "Expanding Shockwave", "Halo & Floor Ring"}, false, function(v)
+    secStyle:Dropdown("Aura Pattern Mode", {"Dual Ring"}, {
+        "Dual Ring", "Vortex Helix", "Expanding Shockwave", "Halo & Floor Ring",
+        "Saturn Rings", "DNA Double Helix", "Crown & Ground Ring", "Chaos Lightning"
+    }, false, function(v)
         aura_config.pattern_mode = v[1]
     end)
 
@@ -343,7 +462,14 @@ if Lib and Lib.CreateWindow then
     secSpeeds:Slider("Spark Speed Mult", 1.4, 0.1, 0.5, 3, "x", function(v) aura_config.spark_speed_mult = v end)
     secSpeeds:Slider("Wave Speed", 2.0, 0.1, 0, 4, "", function(v) aura_config.wave_speed = v end)
     secSpeeds:Slider("Wave Amplitude", 0.5, 0.1, 0, 2, "", function(v) aura_config.wave_amplitude = v end)
-    secSpeeds:Slider("Bobbing Speed", 1.5, 0.1, 0, 4, "", function(v) aura_config.bobbing_speed = v end)
+
+    secSpeeds:Divider("Velocity Reactive")
+    secSpeeds:Toggle("Velocity Speed Expansion", aura_config.velocity_reactive, function(on)
+        aura_config.velocity_reactive = on
+    end)
+    secSpeeds:Toggle("Velocity Heatmap Color", aura_config.velocity_heatmap, function(on)
+        aura_config.velocity_heatmap = on
+    end)
 
     -- Tab 3: Dimensions & Radius
     local dimTab = win:Tab("Dimensions", "maximize-2")
@@ -359,17 +485,21 @@ if Lib and Lib.CreateWindow then
     secSize:Slider("Glow Scale", 2.5, 0.1, 1, 6, "x", function(v) aura_config.glow_scale = v end)
     secSize:Slider("Edge Thickness", 1.5, 0.1, 1, 5, "px", function(v) aura_config.thickness = v end)
 
-    -- Tab 4: Colors & Opacity
+    -- Tab 4: Colors & FX
     local colTab = win:Tab("Colors & FX", "palette")
     local secColors = colTab:Section("Color Customization", "Left")
     secColors:Colorpicker("Outer Particle Color", aura_config.main_color, function(c) aura_config.main_color = c end)
     secColors:Colorpicker("Inner Spark Color", aura_config.spark_color, function(c) aura_config.spark_color = c end)
     secColors:Colorpicker("Glow Color", aura_config.glow_color, function(c) aura_config.glow_color = c end)
 
-    local secRainbow = colTab:Section("Rainbow Modes & Opacity", "Right")
+    local secRainbow = colTab:Section("Special Effects", "Right")
     secRainbow:Toggle("Rainbow Main Color", aura_config.rainbow_main, function(on) aura_config.rainbow_main = on end)
     secRainbow:Toggle("Rainbow Spark Color", aura_config.rainbow_sparks, function(on) aura_config.rainbow_sparks = on end)
     secRainbow:Slider("Rainbow Speed", 1.0, 0.1, 0.2, 5, "x", function(v) aura_config.rainbow_speed = v end)
+
+    secRainbow:Divider("Cyber Hologram (Chroma)")
+    secRainbow:Toggle("RGB Chroma Split", aura_config.chroma_split, function(on) aura_config.chroma_split = on end)
+    secRainbow:Slider("Chroma Offset", 3.0, 0.1, 1, 10, "px", function(v) aura_config.chroma_offset = v end)
 
     secRainbow:Divider("Opacity & Glow")
     secRainbow:Slider("Glow Intensity", 0.35, 0.01, 0, 1, "", function(v) aura_config.glow_intensity = v end)
@@ -393,4 +523,4 @@ _G.get_aura_config = function()
     return aura_config
 end
 
-print("[Matcha 3D Aura Studio]: Color tab crash fixed!")
+print("[Matcha 3D Aura Studio]: RenderStepped smooth sync + exotic FX active!")
