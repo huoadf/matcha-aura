@@ -172,13 +172,30 @@ local function getTargetHRP()
     return myHRP
 end
 
--- Keybind Listener
+-- Keybind Listener (Safe Enum & Keycode handling)
 if UserInputService and UserInputService.InputBegan then
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.KeyCode and input.KeyCode.Name == aura_config.toggle_key then
-            aura_config.enabled = not aura_config.enabled
-        end
+    pcall(function()
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if not input then return end
+            pcall(function()
+                local kc = input.KeyCode
+                if kc then
+                    local isX = false
+                    if type(kc) == "userdata" or type(kc) == "table" then
+                        isX = (kc.Name == aura_config.toggle_key)
+                    elseif typeof and typeof(kc) == "EnumItem" then
+                        isX = (kc.Name == aura_config.toggle_key)
+                    elseif Enum and Enum.KeyCode and Enum.KeyCode.X then
+                        isX = (kc == Enum.KeyCode.X)
+                    end
+
+                    if isX then
+                        aura_config.enabled = not aura_config.enabled
+                    end
+                end
+            end)
+        end)
     end)
 end
 
