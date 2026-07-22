@@ -225,7 +225,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
     for i = pCount + 1, MAX_PARTICLES do particle_pool[i].Visible = false end
 
-    -- 2. Inner Sparks & Glow Orbs Loop (Driven by inner_radius)
+    -- 2. Inner Sparks & Glow Orbs Loop
     if aura_config.sparks_enabled then
         local sCount = math.min(math.floor(aura_config.spark_count), MAX_SPARKS)
         for i = 1, sCount do
@@ -362,14 +362,9 @@ if Lib and Lib.CreateWindow then
     -- Tab 4: Colors & Opacity
     local colTab = win:Tab("Colors & FX", "palette")
     local secColors = colTab:Section("Color Customization", "Left")
-    local colMainToggle = secColors:Toggle("Outer Particle Color", true)
-    colMainToggle:AddColorpicker(aura_config.main_color, function(c) aura_config.main_color = c end)
-
-    local colSparkToggle = secColors:Toggle("Inner Spark Color", true)
-    colSparkToggle:AddColorpicker(aura_config.spark_color, function(c) aura_config.spark_color = c end)
-
-    local colGlowToggle = secColors:Toggle("Glow Color", true)
-    colGlowToggle:AddColorpicker(aura_config.glow_color, function(c) aura_config.glow_color = c end)
+    secColors:Colorpicker("Outer Particle Color", aura_config.main_color, function(c) aura_config.main_color = c end)
+    secColors:Colorpicker("Inner Spark Color", aura_config.spark_color, function(c) aura_config.spark_color = c end)
+    secColors:Colorpicker("Glow Color", aura_config.glow_color, function(c) aura_config.glow_color = c end)
 
     local secRainbow = colTab:Section("Rainbow Modes & Opacity", "Right")
     secRainbow:Toggle("Rainbow Main Color", aura_config.rainbow_main, function(on) aura_config.rainbow_main = on end)
@@ -398,4 +393,4 @@ _G.get_aura_config = function()
     return aura_config
 end
 
-print("[Matcha 3D Aura Studio]: Fixed and loaded successfully!")
+print("[Matcha 3D Aura Studio]: Color tab crash fixed!")
