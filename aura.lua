@@ -442,7 +442,7 @@ if Lib and Lib.CreateWindow then
     Lib:Notify("Matcha Aura Studio", "Loaded! Press P to toggle menu.", 4, "info")
 
     -- Tab 1: Aura Config
-    local mainTab = win:Tab("Aura Config", "sparkles")
+    local mainTab = win:Tab("Aura Config")
     local secControls = mainTab:Section("Master Controls", "Left")
     secControls:Toggle("Enable Main Aura", aura_config.enabled, function(on)
         aura_config.enabled = on
@@ -480,7 +480,7 @@ if Lib and Lib.CreateWindow then
     end)
 
     -- Tab 2: Dynamics & Motion
-    local dynTab = win:Tab("Dynamics", "activity")
+    local dynTab = win:Tab("Dynamics")
     local secCounts = dynTab:Section("Particle Counts", "Left")
     secCounts:Slider("Outer Particle Count", 35, 1, 5, 80, "", function(v) aura_config.particle_count = v end)
     secCounts:Slider("Inner Spark Count", 20, 1, 2, 40, "", function(v) aura_config.spark_count = v end)
@@ -500,7 +500,7 @@ if Lib and Lib.CreateWindow then
     end)
 
     -- Tab 3: Dimensions & Radius
-    local dimTab = win:Tab("Dimensions", "maximize-2")
+    local dimTab = win:Tab("Dimensions")
     local secRad = dimTab:Section("Radius & Offsets", "Left")
     secRad:Slider("Outer Radius", 4.0, 0.1, 1, 12, "m", function(v) aura_config.outer_radius = v end)
     secRad:Slider("Inner Radius", 1.5, 0.1, 0.5, 8, "m", function(v) aura_config.inner_radius = v end)
@@ -514,7 +514,7 @@ if Lib and Lib.CreateWindow then
     secSize:Slider("Edge Thickness", 1.5, 0.1, 1, 5, "px", function(v) aura_config.thickness = v end)
 
     -- Tab 4: Colors & FX
-    local colTab = win:Tab("Colors & FX", "palette")
+    local colTab = win:Tab("Colors & FX")
     local secColors = colTab:Section("Color Customization", "Left")
 
     local colMainToggle = secColors:Toggle("Outer Particle Color", true)
