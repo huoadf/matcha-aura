@@ -1,5 +1,5 @@
 -- ==============================================================================
--- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (SMOOTH RENDER & EXOTIC FX)
+-- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (FIXED & TESTED)
 -- Repository: https://github.com/huoadf/matcha-aura
 -- Docs: https://huoadf.github.io/matcha-docs/
 -- ==============================================================================
@@ -11,7 +11,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Master Config Table
 local aura_config = {
-    -- Master Toggles & Modes
+    -- Toggles & Modes
     enabled            = true,
     sparks_enabled     = true,
     glow_enabled       = true,
@@ -20,13 +20,11 @@ local aura_config = {
     rainbow_sparks     = false,
     rainbow_speed      = 1.0,
 
-    -- Velocity & Reactive FX
     velocity_reactive  = true,
     velocity_heatmap   = false,
     chroma_split       = false,
     chroma_offset      = 3.0,
 
-    -- Target & Pattern Modes
     target_lock_on     = false,
     target_mode        = "LocalPlayer", -- "LocalPlayer", "Closest", "Random"
     pattern_mode       = "Dual Ring",    -- "Dual Ring", "Vortex Helix", "Expanding Shockwave", "Halo & Floor Ring", "Saturn Rings", "DNA Double Helix", "Crown & Ground Ring", "Chaos Lightning"
@@ -173,7 +171,7 @@ local function getTargetHRP()
     return myHRP
 end
 
--- Keybind Toggle Listener
+-- Keybind Listener
 if UserInputService and UserInputService.InputBegan then
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
@@ -183,7 +181,7 @@ if UserInputService and UserInputService.InputBegan then
     end)
 end
 
--- Frame-Perfect Smooth Render Update Routine
+-- Frame-Perfect Render Stepped Update Loop
 local time = 0
 local lastPos = nil
 local currentVelMag = 0
@@ -200,7 +198,6 @@ local function updateAura(dt)
         return
     end
 
-    -- Frame-Perfect Position & Velocity Calculation
     local root_pos = targetHRP.Position
     if lastPos then
         local instVel = (root_pos - lastPos).Magnitude / math.max(dt, 0.001)
@@ -211,12 +208,10 @@ local function updateAura(dt)
     time = time + dt
     COLOR_NOW = (COLOR_NOW + dt * 0.25) % 1.0
 
-    -- Velocity Speed Expansion
     local speedBoost = aura_config.velocity_reactive and math.min(1.5, currentVelMag / 16) or 0
     local outer_r    = aura_config.outer_radius * (1 + speedBoost * 0.35)
     local inner_r    = aura_config.inner_radius * (1 + speedBoost * 0.2)
 
-    -- Dynamic Color Heatmap
     local main_color = aura_config.main_color
     if aura_config.velocity_heatmap then
         local t = math.clamp(currentVelMag / 24, 0, 1)
@@ -233,7 +228,7 @@ local function updateAura(dt)
     -- 1. Main Outer Particles Loop
     local pCount = math.min(math.floor(aura_config.particle_count), MAX_PARTICLES)
     for i = 1, pCount do
-        local c = particle_pool[i]
+        local c  = particle_pool[i]
         local cr = particle_pool_r[i]
         local cb = particle_pool_b[i]
 
@@ -283,7 +278,7 @@ local function updateAura(dt)
             x = root_pos.X + math.cos(angle) * r
             z = root_pos.Z + math.sin(angle) * r
             y = root_pos.Y + aura_config.height_offset + (math.random() * 2 - 1) * 0.4
-        else -- Dual Ring Default (Outer Ring)
+        else -- Dual Ring Default
             local waveOffset = math.sin(time * aura_config.wave_speed + i * 0.5) * aura_config.wave_amplitude
             local r = math.max(0.5, outer_r + waveOffset)
             x = root_pos.X + math.cos(angle) * r
@@ -305,7 +300,6 @@ local function updateAura(dt)
             c.Filled = filled
             c.Visible = true
 
-            -- Chroma Split Offsets
             if aura_config.chroma_split then
                 local co = aura_config.chroma_offset
                 cr.Position = Vector2.new(screen_pos.X - co, screen_pos.Y)
@@ -384,13 +378,21 @@ local function updateAura(dt)
     end
 end
 
--- Connect to RenderStepped / Stepped for 100% Frame-Perfect Smoothness
+-- Connect to RenderStepped / Stepped
 if RunService.RenderStepped then
     RunService.RenderStepped:Connect(updateAura)
 elseif RunService.Stepped then
     RunService.Stepped:Connect(function(_, dt) updateAura(dt) end)
 else
     RunService.Heartbeat:Connect(updateAura)
+end
+
+-- INS-UI Helper to safely unwrap string vs table dropdown returns
+local function unwrapVal(v)
+    if type(v) == "table" then
+        return v[1]
+    end
+    return v
 end
 
 -- Official INS-ui Integration
@@ -416,7 +418,7 @@ if Lib and Lib.CreateWindow then
     })
 
     win:AddSettingsTab("cog")
-    Lib:Notify("Matcha Aura Studio", "Loaded! Smooth 120 FPS active.", 4, "info")
+    Lib:Notify("Matcha Aura Studio", "Loaded! Press P to toggle menu.", 4, "info")
 
     -- Tab 1: Aura Config
     local mainTab = win:Tab("Aura Config", "sparkles")
@@ -440,7 +442,8 @@ if Lib and Lib.CreateWindow then
         aura_config.target_lock_on = on
     end)
     secControls:Dropdown("Target Mode", {"LocalPlayer"}, {"LocalPlayer", "Closest", "Random"}, false, function(v)
-        aura_config.target_mode = v[1]
+        local val = unwrapVal(v)
+        if val then aura_config.target_mode = val end
     end)
 
     local secStyle = mainTab:Section("Pattern Styles", "Right")
@@ -448,7 +451,8 @@ if Lib and Lib.CreateWindow then
         "Dual Ring", "Vortex Helix", "Expanding Shockwave", "Halo & Floor Ring",
         "Saturn Rings", "DNA Double Helix", "Crown & Ground Ring", "Chaos Lightning"
     }, false, function(v)
-        aura_config.pattern_mode = v[1]
+        local val = unwrapVal(v)
+        if val then aura_config.pattern_mode = val end
     end)
 
     -- Tab 2: Dynamics & Motion
@@ -488,9 +492,15 @@ if Lib and Lib.CreateWindow then
     -- Tab 4: Colors & FX
     local colTab = win:Tab("Colors & FX", "palette")
     local secColors = colTab:Section("Color Customization", "Left")
-    secColors:Colorpicker("Outer Particle Color", aura_config.main_color, function(c) aura_config.main_color = c end)
-    secColors:Colorpicker("Inner Spark Color", aura_config.spark_color, function(c) aura_config.spark_color = c end)
-    secColors:Colorpicker("Glow Color", aura_config.glow_color, function(c) aura_config.glow_color = c end)
+    
+    local colMainToggle = secColors:Toggle("Outer Particle Color", true)
+    colMainToggle:AddColorpicker("Outer Color", aura_config.main_color, function(c) aura_config.main_color = c end)
+
+    local colSparkToggle = secColors:Toggle("Inner Spark Color", true)
+    colSparkToggle:AddColorpicker("Spark Color", aura_config.spark_color, function(c) aura_config.spark_color = c end)
+
+    local colGlowToggle = secColors:Toggle("Glow Color", true)
+    colGlowToggle:AddColorpicker("Glow Color", aura_config.glow_color, function(c) aura_config.glow_color = c end)
 
     local secRainbow = colTab:Section("Special Effects", "Right")
     secRainbow:Toggle("Rainbow Main Color", aura_config.rainbow_main, function(on) aura_config.rainbow_main = on end)
@@ -523,4 +533,4 @@ _G.get_aura_config = function()
     return aura_config
 end
 
-print("[Matcha 3D Aura Studio]: RenderStepped smooth sync + exotic FX active!")
+print("[Matcha 3D Aura Studio]: All INS-ui bindings and RenderStepped smooth sync fixed!")
