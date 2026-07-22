@@ -172,27 +172,20 @@ local function getTargetHRP()
     return myHRP
 end
 
--- Keybind Listener
+-- Keybind Listener (100% Fail-Proof Silent Keycode Handling)
 if UserInputService and UserInputService.InputBegan then
     pcall(function()
         UserInputService.InputBegan:Connect(function(input, gameProcessed)
-            if gameProcessed then return end
-            if not input then return end
+            if gameProcessed or not input then return end
             pcall(function()
                 local kc = input.KeyCode
-                if kc then
-                    local isX = false
-                    if type(kc) == "userdata" or type(kc) == "table" then
-                        isX = (kc.Name == aura_config.toggle_key)
-                    elseif typeof and typeof(kc) == "EnumItem" then
-                        isX = (kc.Name == aura_config.toggle_key)
-                    elseif Enum and Enum.KeyCode and Enum.KeyCode.X then
-                        isX = (kc == Enum.KeyCode.X)
-                    end
+                if not kc then return end
 
-                    if isX then
-                        aura_config.enabled = not aura_config.enabled
-                    end
+                local name = nil
+                pcall(function() name = kc.Name end)
+
+                if name and (name == aura_config.toggle_key or tostring(name):upper() == tostring(aura_config.toggle_key):upper()) then
+                    aura_config.enabled = not aura_config.enabled
                 end
             end)
         end)
