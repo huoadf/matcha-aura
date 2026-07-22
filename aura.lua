@@ -1,5 +1,5 @@
 -- ==============================================================================
--- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (FIXED & TESTED)
+-- 🔮 MATCHA PARTICLE & SPARK AURA STUDIO (PURE SOLID & TRANSPARENT TOGGLE)
 -- Repository: https://github.com/huoadf/matcha-aura
 -- Docs: https://huoadf.github.io/matcha-docs/
 -- ==============================================================================
@@ -16,6 +16,7 @@ local aura_config = {
     sparks_enabled     = true,
     glow_enabled       = true,
     filled_particles   = false,
+    pure_solid         = false, -- Toggle between 100% Solid Opaque vs Fading Transparent
     rainbow_main       = false,
     rainbow_sparks     = false,
     rainbow_speed      = 1.0,
@@ -224,6 +225,7 @@ local function updateAura(dt)
     local glow_color  = aura_config.glow_color
     local opacity     = aura_config.opacity
     local filled      = aura_config.filled_particles
+    local isSolid     = aura_config.pure_solid
 
     -- 1. Main Outer Particles Loop
     local pCount = math.min(math.floor(aura_config.particle_count), MAX_PARTICLES)
@@ -290,13 +292,14 @@ local function updateAura(dt)
 
         if onScreen then
             local size = aura_config.particle_size + math.sin(time * 2.5 + i * 0.5) * 0.5
-            local alpha = 0.3 + math.sin(time * 2.0 + i * 0.3) * 0.3
+            local alpha = isSolid and 1.0 or (0.3 + math.sin(time * 2.0 + i * 0.3) * 0.3)
+            local finalTransp = isSolid and 1.0 or math.clamp(alpha * opacity, 0, 1)
 
             c.Position = Vector2.new(screen_pos.X, screen_pos.Y)
             c.Radius = math.max(size, 0.5)
             c.Thickness = aura_config.thickness
             c.Color = main_color
-            c.Transparency = math.clamp(alpha * opacity, 0, 1)
+            c.Transparency = finalTransp
             c.Filled = filled
             c.Visible = true
 
@@ -304,12 +307,12 @@ local function updateAura(dt)
                 local co = aura_config.chroma_offset
                 cr.Position = Vector2.new(screen_pos.X - co, screen_pos.Y)
                 cr.Radius = size
-                cr.Transparency = alpha * opacity * 0.6
+                cr.Transparency = isSolid and 0.8 or (alpha * opacity * 0.6)
                 cr.Visible = true
 
                 cb.Position = Vector2.new(screen_pos.X + co, screen_pos.Y)
                 cb.Radius = size
-                cb.Transparency = alpha * opacity * 0.6
+                cb.Transparency = isSolid and 0.8 or (alpha * opacity * 0.6)
                 cb.Visible = true
             else
                 cr.Visible = false
@@ -345,17 +348,18 @@ local function updateAura(dt)
 
             if onScreen then
                 local size = aura_config.spark_size + math.sin(time * 4.0 + i * 1.5) * 0.3
-                local alpha = 0.4 + math.sin(time * 3.0 + i * 0.7) * 0.3
+                local alpha = isSolid and 1.0 or (0.4 + math.sin(time * 3.0 + i * 0.7) * 0.3)
+                local finalTransp = isSolid and 1.0 or math.clamp(alpha * opacity, 0, 1)
 
                 s.Position = Vector2.new(screen_pos.X, screen_pos.Y)
                 s.Radius = math.max(size, 0.3)
                 s.Color = spark_color
-                s.Transparency = math.clamp(alpha * opacity, 0, 1)
+                s.Transparency = finalTransp
                 s.Visible = true
 
                 if aura_config.glow_enabled and aura_config.glow_intensity > 0 then
                     local glow_size = size * aura_config.glow_scale
-                    local glow_alpha = aura_config.glow_intensity * alpha * opacity * 0.35
+                    local glow_alpha = isSolid and 0.7 or (aura_config.glow_intensity * alpha * opacity * 0.35)
                     g.Position = Vector2.new(screen_pos.X, screen_pos.Y)
                     g.Radius = glow_size
                     g.Color = glow_color
@@ -387,7 +391,7 @@ else
     RunService.Heartbeat:Connect(updateAura)
 end
 
--- INS-UI Helper to safely unwrap string vs table dropdown returns
+-- INS-UI Helper
 local function unwrapVal(v)
     if type(v) == "table" then
         return v[1]
@@ -432,6 +436,9 @@ if Lib and Lib.CreateWindow then
     end)
     secControls:Toggle("Enable Spark Glow", aura_config.glow_enabled, function(on)
         aura_config.glow_enabled = on
+    end)
+    secControls:Toggle("Pure Solid Mode (100% Opaque)", aura_config.pure_solid, function(on)
+        aura_config.pure_solid = on
     end)
     secControls:Toggle("Filled Particles", aura_config.filled_particles, function(on)
         aura_config.filled_particles = on
@@ -492,7 +499,7 @@ if Lib and Lib.CreateWindow then
     -- Tab 4: Colors & FX
     local colTab = win:Tab("Colors & FX", "palette")
     local secColors = colTab:Section("Color Customization", "Left")
-    
+
     local colMainToggle = secColors:Toggle("Outer Particle Color", true)
     colMainToggle:AddColorpicker("Outer Color", aura_config.main_color, function(c) aura_config.main_color = c end)
 
@@ -503,6 +510,7 @@ if Lib and Lib.CreateWindow then
     colGlowToggle:AddColorpicker("Glow Color", aura_config.glow_color, function(c) aura_config.glow_color = c end)
 
     local secRainbow = colTab:Section("Special Effects", "Right")
+    secRainbow:Toggle("Pure Solid Mode (100% Opaque)", aura_config.pure_solid, function(on) aura_config.pure_solid = on end)
     secRainbow:Toggle("Rainbow Main Color", aura_config.rainbow_main, function(on) aura_config.rainbow_main = on end)
     secRainbow:Toggle("Rainbow Spark Color", aura_config.rainbow_sparks, function(on) aura_config.rainbow_sparks = on end)
     secRainbow:Slider("Rainbow Speed", 1.0, 0.1, 0.2, 5, "x", function(v) aura_config.rainbow_speed = v end)
@@ -533,4 +541,4 @@ _G.get_aura_config = function()
     return aura_config
 end
 
-print("[Matcha 3D Aura Studio]: All INS-ui bindings and RenderStepped smooth sync fixed!")
+print("[Matcha 3D Aura Studio]: Pure Solid / Transparent toggle active!")
