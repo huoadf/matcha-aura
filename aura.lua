@@ -447,9 +447,6 @@ if Lib and Lib.CreateWindow then
     secControls:Toggle("Enable Spark Glow", aura_config.glow_enabled, function(on)
         aura_config.glow_enabled = on
     end)
-    secControls:Toggle("Pure Solid Mode (100% Opaque)", aura_config.pure_solid, function(on)
-        aura_config.pure_solid = on
-    end)
     secControls:Toggle("Filled Particles", aura_config.filled_particles, function(on)
         aura_config.filled_particles = on
     end)
